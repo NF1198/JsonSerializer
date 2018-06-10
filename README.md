@@ -6,7 +6,12 @@ A compact, code-efficient JSON serializer and parser using a builder pattern
 * Pull repository
 * Include in your Gradle project
 * Refer to tests for example usage
-
+ 
+# Features
+* Supports simple types (numbers, strings, boolean, null)
+* Supports objects, object composition, and type recursion
+* Supports arrays (including arrays of objects)
+* Parser expects single-typed arrays, but does not fail if unexpected types are encountered (produces nulls)
 
 # Examples
 
