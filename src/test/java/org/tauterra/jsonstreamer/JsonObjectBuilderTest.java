@@ -19,7 +19,6 @@ import java.io.Reader;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Function;
 import org.junit.Test;
 
 /**
@@ -53,8 +52,8 @@ public class JsonObjectBuilderTest {
 
         JsonObjectBuilder<SubTest> subTestBuilder = new JsonObjectBuilder<>(() -> new SubTest())
                 .addNumberHandler("foo", (obj, value) -> obj.foo = value)
-                .setMissingElementHandler((event, label) -> {
-                    System.out.println("Missing element handler: " + event + " (" + label + ")");
+                .setMissingElementHandler((obj, event, label, value) -> {
+                    System.out.println("Missing element handler: " + event + " (" + label + "): " + value );
                 });
 
         JsonObjectBuilder<TestClass> testClassBuilder = new JsonObjectBuilder<>(() -> new TestClass())
@@ -69,8 +68,8 @@ public class JsonObjectBuilderTest {
                 .addDoubleArrayHandler("dblAry", (obj, value) -> obj.dblAry = value)
                 .addBooleanArrayHandler("boolAry", (obj, value) -> obj.boolAry = value)
                 .addStringArrayHandler("strAry", (obj, value) -> obj.strAry = value)
-                .setMissingElementHandler((event, label) -> {
-                    System.out.println("Missing element handler: " + event + " (" + label + ")");
+                .setMissingElementHandler((obj, event, label, value) -> {
+                    System.out.println("Missing element handler: " + event + " (" + label + "): " + value);
                 });
         // recursion
         testClassBuilder.addObjectHandler("subTest", (obj, value) -> obj.subItem = value, testClassBuilder);

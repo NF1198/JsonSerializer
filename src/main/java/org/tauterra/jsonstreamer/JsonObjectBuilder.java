@@ -45,7 +45,7 @@ public class JsonObjectBuilder<U> {
     private final Map<String, BiConsumer<U, List<String>>> stringArrayHandlers = new HashMap<>();
     private final Map<String, BiConsumer<U, List>> objectArrayHandlers = new HashMap<>();
 
-    private BiConsumer<JsonParser.JsonEvent, String> missingElementHandler = null;
+    private MissingElementHandler<U> missingElementHandler = null;
 
     public JsonObjectBuilder(Supplier<U> supplier) {
         this.supplier = supplier;
@@ -107,7 +107,7 @@ public class JsonObjectBuilder<U> {
         return this;
     }
 
-    public JsonObjectBuilder<U> setMissingElementHandler(BiConsumer<JsonParser.JsonEvent, String> handler) {
+    public JsonObjectBuilder<U> setMissingElementHandler(MissingElementHandler<U> handler) {
         this.missingElementHandler = handler;
         return this;
     }
@@ -121,15 +121,15 @@ public class JsonObjectBuilder<U> {
         intArrayHandlers.remove(key);
     }
 
-    private BiConsumer<JsonParser.JsonEvent, String> getMissingElementHandler() {
-        return (missingElementHandler != null) ? missingElementHandler : (a, b) -> {
+    private MissingElementHandler<U> getMissingElementHandler() {
+        return (missingElementHandler != null) ? missingElementHandler : (a, b, c, d) -> {
         };
     }
 
     public Function<Reader, U> build() {
         return (Reader r) -> parse(r);
     }
-    
+
     public U parse(Reader jsonReader) throws IOException, JsonParser.MalformedJsonException {
         return parse(jsonReader, null);
     }
@@ -148,7 +148,7 @@ public class JsonObjectBuilder<U> {
                 case NUMBER:
                     if (label != null) {
                         if (!numberHandlers.containsKey(label[0])) {
-                            getMissingElementHandler().accept(event, label[0]);
+                            getMissingElementHandler().accept(obj, event, label[0], Double.toString(tok.nval));
                             break;
                         }
                         numberHandlers.getOrDefault(label[0], (a, b) -> {
@@ -158,7 +158,7 @@ public class JsonObjectBuilder<U> {
                 case STRING:
                     if (label != null) {
                         if (!stringHandlers.containsKey(label[0])) {
-                            getMissingElementHandler().accept(event, label[0]);
+                            getMissingElementHandler().accept(obj, event, label[0], tok.sval);
                             break;
                         }
                         stringHandlers.getOrDefault(label[0], (a, b) -> {
@@ -168,7 +168,7 @@ public class JsonObjectBuilder<U> {
                 case BOOLEAN_T:
                     if (label != null) {
                         if (!booleanHandlers.containsKey(label[0])) {
-                            getMissingElementHandler().accept(event, label[0]);
+                            getMissingElementHandler().accept(obj, event, label[0], "true");
                             break;
                         }
                         booleanHandlers.getOrDefault(label[0], (a, b) -> {
@@ -178,7 +178,7 @@ public class JsonObjectBuilder<U> {
                 case BOOLEAN_F:
                     if (label != null) {
                         if (!booleanHandlers.containsKey(label[0])) {
-                            getMissingElementHandler().accept(event, label[0]);
+                            getMissingElementHandler().accept(obj, event, label[0], "false");
                             break;
                         }
                         booleanHandlers.getOrDefault(label[0], (a, b) -> {
@@ -189,7 +189,7 @@ public class JsonObjectBuilder<U> {
                     if (label[0] != null) {
                         JsonObjectBuilder blder = builderMap.get(label[0]);
                         if (blder == null) {
-                            getMissingElementHandler().accept(event, label[0]);
+                            getMissingElementHandler().accept(obj, event, label[0], null);
                             break;
                         }
                         Object subObj = blder.parse(jsonReader, JsonParserState.INOBJECT);
@@ -222,7 +222,7 @@ public class JsonObjectBuilder<U> {
                                     .get(label[0])
                                     .accept(obj, JsonParser.ParseObjectArray(jsonReader, tok, () -> new ArrayList(), builderMap.get(label[0])));
                         } else {
-                            getMissingElementHandler().accept(event, label[0]);
+                            getMissingElementHandler().accept(obj, event, label[0], null);
                             break;
                         }
                     }
@@ -233,7 +233,14 @@ public class JsonObjectBuilder<U> {
     }
 
     @FunctionalInterface
-    public static interface Function<U, R>  {
+    public static interface Function<U, R> {
+
         R accept(U r) throws IOException, JsonParser.MalformedJsonException;
+    }
+
+    @FunctionalInterface
+    public static interface MissingElementHandler<V> {
+
+        void accept(V obj, JsonParser.JsonEvent event, String label, String value);
     }
 }
