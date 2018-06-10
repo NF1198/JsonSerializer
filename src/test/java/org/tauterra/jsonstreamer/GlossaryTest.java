@@ -18,6 +18,7 @@ package org.tauterra.jsonstreamer;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import static org.junit.Assert.*;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.tauterra.jsonstreamer.GlossaryJSON.GlossDef;
@@ -99,6 +100,17 @@ public class GlossaryTest {
         InputStreamReader reader = new InputStreamReader(GlossaryJSON.class.getResourceAsStream("/json/glossary.json"));
         Glossary g = glossaryParser.parse(reader);
         System.out.println(g);
+        assertEquals("example glossary", g.title);
+        assertEquals("S", g.glossDiv.title);
+        assertEquals("SGML", g.glossDiv.glossList.glossEntry.id);
+        assertEquals("SGML", g.glossDiv.glossList.glossEntry.sortAs);
+        assertEquals("Standard Generalized Markup Language", g.glossDiv.glossList.glossEntry.glossTerm);
+        assertEquals("SGML", g.glossDiv.glossList.glossEntry.acronym);
+        assertEquals("ISO 8879:1986", g.glossDiv.glossList.glossEntry.abbrev);
+        assertEquals("markup", g.glossDiv.glossList.glossEntry.glossSee);
+        assertEquals("A meta-markup language, used to create markup languages such as DocBook.", g.glossDiv.glossList.glossEntry.glossDef.para);
+        assertTrue(g.glossDiv.glossList.glossEntry.glossDef.glossSeeAlso.contains("GML"));
+        assertTrue(g.glossDiv.glossList.glossEntry.glossDef.glossSeeAlso.contains("XML"));
     }
 
     @Test
