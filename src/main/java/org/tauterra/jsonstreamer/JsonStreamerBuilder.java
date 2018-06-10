@@ -150,7 +150,21 @@ public class JsonStreamerBuilder<T> {
         return this;
     }
 
+    public JsonStreamerBuilder<T> recursiveField(String name, Function<T, T> fun) {
+        return recursiveField(name, ORDER_UNDEFINED, fun);
+    }
+
+    public JsonStreamerBuilder<T> recursiveField(String name, int order, Function<T, T> fun) {
+        fieldCount++;
+        order = (order != ORDER_UNDEFINED) ? order : fieldCount;
+        FieldKey key = new FieldKey(name, order);
+        tags.put(key, RECURSIVETAG);
+        tagsRecursive.put(key, fun);
+        return this;
+    }
+
     private final Map<FieldKey, Function<T, String>> tags = new TreeMap<>();
+    private final Map<FieldKey, Function<T, T>> tagsRecursive = new TreeMap<>();
     private final Map<FieldKey, JsonStreamer<T>> tagsObj = new TreeMap<>();
     private final Map<FieldKey, Function<T, IntStream>> tagsIntStream = new TreeMap<>();
     private final Map<FieldKey, Function<T, LongStream>> tagsLongStream = new TreeMap<>();
@@ -169,6 +183,7 @@ public class JsonStreamerBuilder<T> {
     private final Function<T, String> BOOLEANARRYTAG = (obj) -> "BOOLEANARRYTAG";
     private final Function<T, String> STRINGARRYTAG = (obj) -> "STRINGARRYTAG";
     private final Function<T, String> OBJARRYTAG = (obj) -> "OBJARRYTAG";
+    private final Function<T, String> RECURSIVETAG = (obj) -> "RECURSIVETAG";
 
     public <U> JsonStreamerBuilder<T> objectField(String name, Function<T, U> fun, JsonStreamer<U> objStreamer) {
         return objectField(name, ORDER_UNDEFINED, fun, objStreamer);
@@ -304,6 +319,7 @@ public class JsonStreamerBuilder<T> {
                     final byte[] nl = (indent == 0) ? "".getBytes() : "\n".getBytes();
                     final byte[] arryJoin = ((indent == 0) ? "," : ", ").getBytes();
                     final byte[] arryEnds = "[]".getBytes();
+                    final byte[] nullBytes = "null".getBytes();
 
                     os.write("{".getBytes());
                     os.write(nl);
@@ -315,7 +331,14 @@ public class JsonStreamerBuilder<T> {
                         os.write(key.tag.getBytes());
                         os.write(dq);
                         os.write(co);
-                        if (OBJTAG.equals(value)) {
+                        if (RECURSIVETAG.equals(value)) {
+                            T subItem = tagsRecursive.get(key).apply(obj);
+                            if (subItem != null) {
+                                this.accept(subItem, os, indent, indent + indent);
+                            } else {
+                                os.write(nullBytes);
+                            }
+                        } else if (OBJTAG.equals(value)) {
                             final JsonStreamer<T> tagObjValue = tagsObj.get(key);
                             tagObjValue.accept(obj, os, indent, indent + indent);
                         } else if (INTARRYTAG.equals(value)) {

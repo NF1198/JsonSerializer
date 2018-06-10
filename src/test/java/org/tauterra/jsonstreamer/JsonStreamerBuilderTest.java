@@ -15,7 +15,6 @@
  */
 package org.tauterra.jsonstreamer;
 
-import org.tauterra.jsonstreamer.JsonStreamerBuilder;
 import java.io.ByteArrayOutputStream;
 import java.util.Arrays;
 import java.util.Collection;
@@ -45,6 +44,15 @@ public class JsonStreamerBuilderTest {
         test.aDouble = 23.2341;
         test.aFloat = 12.23f;
         test.aString = "Hello";
+        
+        TestClass childItem = new TestClass();
+        childItem.anInt = 2309;
+        childItem.aLong = 29999L;
+        childItem.aDouble = 29.202939;
+        childItem.aFloat = 02010.0239f;
+        childItem.aString = "I am a child";
+
+        test.recTest = childItem;
 
         TestClassStreamer.accept(test, baos, 2);
 
@@ -81,26 +89,29 @@ public class JsonStreamerBuilderTest {
         Collection<Boolean> someBooleans = Arrays.asList(false, false, true, false);
         Collection<String> someStrings = Arrays.asList("bob", "car", "dog", "cat");
         Collection<SubTest> someObjs = Arrays.asList(new SubTest(34), new SubTest(993));
+        TestClass recTest = null;
     }
 
-    final static JsonStreamer<TestClass> TestClassStreamer = new JsonStreamerBuilder<TestClass>()
-            .intField("anInt", (obj) -> obj.anInt, "######0")
-            .longField("aLong", (obj) -> obj.aLong)
-            .doubleField("aDouble", (obj) -> obj.aDouble, "0.000000")
-            .floatField("aFloat", (obj) -> obj.aFloat, "0.00")
-            .stringField("aString", (obj) -> obj.aString)
-            .booleanField("aTrue", (obj) -> true)
-            .booleanField("aFalse", (obj) -> false)
-            .objectField("subTest", (obj) -> obj.subTest, SubTestStreamer)
-            .intArrayField("someInts", (obj) -> obj.someInts.stream().mapToInt(i -> i), "0")
-            .longArrayField("someLongs", (obj) -> obj.someLongs.stream().mapToLong(i -> i), "0")
-            .doubleArrayField("someDoubles", (obj) -> obj.someDoubles.stream().mapToDouble(i -> i), "0.000000")
-            .floatArrayField("someFloats", (obj) -> obj.someFloats.stream(), "0.000")
-            .booleanArrayField("someBooleans", (obj) -> obj.someBooleans.stream())
-            .stringArrayField("someStrings", (obj) -> obj.someStrings.stream())
-            .objectArrayField("someObjects", (obj) -> obj.someObjs.stream(), SubTestStreamer)
-            .intArrayField("intSeq", (obj) -> IntStream.rangeClosed(-100, 100), null)
-            .doubleArrayField("doubleSeq", (obj) -> DoubleStream.iterate(-10, (p) -> p + 0.1).limit(201), "#0.0")
-            .build();
+    final static JsonStreamer<TestClass> TestClassStreamer
+            = new JsonStreamerBuilder<TestClass>()
+                    .intField("anInt", (obj) -> obj.anInt, "######0")
+                    .longField("aLong", (obj) -> obj.aLong)
+                    .doubleField("aDouble", (obj) -> obj.aDouble, "0.000000")
+                    .floatField("aFloat", (obj) -> obj.aFloat, "0.00")
+                    .stringField("aString", (obj) -> obj.aString)
+                    .booleanField("aTrue", (obj) -> true)
+                    .booleanField("aFalse", (obj) -> false)
+                    .objectField("subTest", (obj) -> obj.subTest, SubTestStreamer)
+                    .intArrayField("someInts", (obj) -> obj.someInts.stream().mapToInt(i -> i), "0")
+                    .longArrayField("someLongs", (obj) -> obj.someLongs.stream().mapToLong(i -> i), "0")
+                    .doubleArrayField("someDoubles", (obj) -> obj.someDoubles.stream().mapToDouble(i -> i), "0.000000")
+                    .floatArrayField("someFloats", (obj) -> obj.someFloats.stream(), "0.000")
+                    .booleanArrayField("someBooleans", (obj) -> obj.someBooleans.stream())
+                    .stringArrayField("someStrings", (obj) -> obj.someStrings.stream())
+                    .objectArrayField("someObjects", (obj) -> obj.someObjs.stream(), SubTestStreamer)
+                    .intArrayField("intSeq", (obj) -> IntStream.rangeClosed(-100, 100), null)
+                    .doubleArrayField("doubleSeq", (obj) -> DoubleStream.iterate(-10, (p) -> p + 0.1).limit(201), "#0.0")
+                    .recursiveField("recTest", (obj) -> obj.recTest)
+                    .build();
 
 }

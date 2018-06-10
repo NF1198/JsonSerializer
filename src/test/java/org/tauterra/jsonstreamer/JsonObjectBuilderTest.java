@@ -57,6 +57,7 @@ public class JsonObjectBuilderTest {
 
         JsonObjectBuilder<TestClass> testClassBuilder = new JsonObjectBuilder<>(() -> new TestClass())
                 .addNumberHandler("foo", (obj, value) -> obj.foo = value)
+                .addNumberHandler("anInt", (obj, value) -> obj.anInt = value.intValue())
                 .addStringHandler("Bar", (obj, value) -> obj.Bar = value)
                 .addBooleanHandler("zenF", (obj, value) -> obj.zenF = value)
                 .addBooleanHandler("zenT", (obj, value) -> obj.zenT = value)
@@ -78,6 +79,7 @@ public class JsonObjectBuilderTest {
     private static class TestClass {
 
         public double foo;
+        public int anInt;
         public String Bar;
         public boolean zenF;
         public boolean zenT;
