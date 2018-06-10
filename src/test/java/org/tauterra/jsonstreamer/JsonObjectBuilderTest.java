@@ -15,9 +15,11 @@
  */
 package org.tauterra.jsonstreamer;
 
+import java.io.Reader;
 import java.io.StringReader;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 import org.junit.Test;
 
 /**
@@ -73,7 +75,10 @@ public class JsonObjectBuilderTest {
         // recursion
         testClassBuilder.addObjectHandler("subTest", (obj, value) -> obj.subItem = value, testClassBuilder);
 
-        System.out.println(testClassBuilder.parse(reader));
+        JsonObjectBuilder.Function<Reader, TestClass> parser = testClassBuilder.build();
+
+        System.out.println(parser.accept(reader));
+//        System.out.println(testClassBuilder.parse(reader));
     }
 
     private static class TestClass {

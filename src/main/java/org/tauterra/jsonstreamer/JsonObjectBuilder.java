@@ -15,7 +15,6 @@
  */
 package org.tauterra.jsonstreamer;
 
-import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.Reader;
 import java.util.ArrayList;
@@ -127,6 +126,10 @@ public class JsonObjectBuilder<U> {
         };
     }
 
+    public Function<Reader, U> build() {
+        return (Reader r) -> parse(r);
+    }
+    
     public U parse(Reader jsonReader) throws IOException, JsonParser.MalformedJsonException {
         return parse(jsonReader, null);
     }
@@ -229,4 +232,8 @@ public class JsonObjectBuilder<U> {
         return obj;
     }
 
+    @FunctionalInterface
+    public static interface Function<U, R>  {
+        R accept(U r) throws IOException, JsonParser.MalformedJsonException;
+    }
 }
