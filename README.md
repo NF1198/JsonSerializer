@@ -34,9 +34,9 @@ A compact, code-efficient JSON serializer and parser using a builder pattern
       .addNumberHandler("aDouble", (obj, value) -> obj.aDouble = value)
       .addBooleanHandler("aBoolean", (obj, value) -> obj.aBoolean = value)
       .addStringHandler("aString", (obj, value) -> obj.aString = value)
-      .setMissingElementHandler((event, label) -> {
-              System.out.println("Missing element handler: " + event + " (" + label + ")");
-          });
+      .setMissingElementHandler((obj, event, label, value) -> {
+            System.out.println("Missing element handler: " + event + " (" + label + "): " + value);
+        });
     testClassBuilder.addObjectHandler("subItem", (obj, value) -> obj.subItem = value, testClassBuilder);
 
     void test() {
