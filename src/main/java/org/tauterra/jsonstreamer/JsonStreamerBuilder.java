@@ -193,7 +193,7 @@ public class JsonStreamerBuilder<T> {
         fieldCount++;
         order = (order != ORDER_UNDEFINED) ? order : fieldCount;
         FieldKey key = new FieldKey(name, order);
-        tagsObj.put(key, (obj, os, predent, indent) -> objStreamer.accept(fun.apply(obj), os, predent, indent));
+        tagsObj.put(key, (obj, os, predent, indent, iof) -> objStreamer.accept(fun.apply(obj), os, predent, indent, iof));
         tags.put(key, OBJTAG);
         return this;
     }
@@ -299,14 +299,15 @@ public class JsonStreamerBuilder<T> {
         JsonStreamer<T> result = new JsonStreamer<T>() {
             @Override
             public void accept(T obj, OutputStream os, int indent) {
-                accept(obj, os, 0, indent);
+                accept(obj, os, 0, indent, indent);
             }
 
             @Override
             @SuppressWarnings("unchecked")
-            public void accept(T obj, OutputStream os, int predent, int indent) {
+            public void accept(T obj, OutputStream os, int predent, int indent, int indentOffset) {
                 predent = predent < 0 ? 0 : predent;
                 indent = indent < 0 ? 0 : indent;
+                indentOffset = indentOffset < 0 ? 0 : indentOffset;
 
                 final int size = tags.size();
                 int count = 0;
@@ -334,13 +335,13 @@ public class JsonStreamerBuilder<T> {
                         if (RECURSIVETAG.equals(value)) {
                             T subItem = tagsRecursive.get(key).apply(obj);
                             if (subItem != null) {
-                                this.accept(subItem, os, indent, indent + indent);
+                                this.accept(subItem, os, indent, indent + indentOffset, indentOffset);
                             } else {
                                 os.write(nullBytes);
                             }
                         } else if (OBJTAG.equals(value)) {
                             final JsonStreamer<T> tagObjValue = tagsObj.get(key);
-                            tagObjValue.accept(obj, os, indent, indent + indent);
+                            tagObjValue.accept(obj, os, indent, indent + indentOffset, indentOffset);
                         } else if (INTARRYTAG.equals(value)) {
                             final Function<T, IntStream> intStreamFun = tagsIntStream.get(key);
                             DecimalFormat fmt = makeDecimalFormat(tagsStreamFormats.get(key));
@@ -376,7 +377,9 @@ public class JsonStreamerBuilder<T> {
                             Stream elementGenerator = objStreamFun.apply(obj);
                             boolean[] isMiddle = new boolean[]{false};
                             try {
-                                final int indentFinal = indent;
+                                final int finalPredent = indent+indentOffset;
+                                final int finalIndent = indent+indentOffset;
+                                final int finalIndentOffset = indentOffset;
                                 os.write(arryEnds[0]);
                                 elementGenerator
                                         .forEach((element) -> {
@@ -385,7 +388,7 @@ public class JsonStreamerBuilder<T> {
                                                 if (isMiddle[0]) {
                                                     os.write(arryJoin);
                                                 }
-                                                objStreamElementFun.accept(element, os, indentFinal + indentFinal, indentFinal + indentFinal);
+                                                objStreamElementFun.accept(element, os, finalPredent, finalIndent, finalIndentOffset);
                                                 isMiddle[0] = true;
                                             } catch (IOException ex) {
                                             }
@@ -446,10 +449,10 @@ public class JsonStreamerBuilder<T> {
     public static interface JsonStreamer<V> {
 
         public default void accept(V obj, OutputStream os, int indent) {
-            accept(obj, os, 0, indent);
+            accept(obj, os, 0, indent, indent);
         }
 
-        public void accept(V obj, OutputStream os, int predent, int indent);
+        public void accept(V obj, OutputStream os, int predent, int indent, int indentOffset);
     }
 
     private static class FieldKey implements Comparable<FieldKey> {
