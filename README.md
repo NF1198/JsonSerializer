@@ -8,6 +8,9 @@ A compact, code-efficient JSON serializer and parser using a builder pattern
 * Refer to tests for example usage
  
 # Features
+* Simple parsing of JSON to Java objects
+* Simple streaming of Java objects to JSON
+* Does not use reflection
 * Supports simple types (numbers, strings, boolean, null)
 * Supports objects, object composition, and type recursion
 * Supports arrays (including arrays of objects)
