@@ -45,6 +45,7 @@ public class JsonObjectBuilderTest {
                 + "\"dblAry\":[2.0923, 2309.20, -1209.20, NaN], "
                 + "\"strAry\":[\"two\", { \"foo\":-19324 }, false, true, 23], "
                 + "\"boolAry\":[2, \"two\", { \"foo\":-19324 }, false, true, 23], "
+                + "\"subTest\" : {\"foo\": 99}, "
                 + "}";
         final StringReader reader = new StringReader(json);
 
@@ -68,6 +69,8 @@ public class JsonObjectBuilderTest {
                 .setMissingElementHandler((event, label) -> {
                     System.out.println("Missing element handler: " + event + " (" + label + ")");
                 });
+        // recursion
+        testClassBuilder.addObjectHandler("subTest", (obj, value) -> obj.subItem = value, testClassBuilder);
 
         System.out.println(testClassBuilder.parse(reader));
     }
@@ -84,10 +87,11 @@ public class JsonObjectBuilderTest {
         public List<Double> dblAry = new ArrayList<>();
         public List<String> strAry = new ArrayList<>();
         public List<Boolean> boolAry = new ArrayList<>();
+        public TestClass subItem;
 
         @Override
         public String toString() {
-            return "TestClass{" + "foo=" + foo + ", Bar=" + Bar + ", zenF=" + zenF + ", zenT=" + zenT + ", ben=" + ben + ", subTestAry=" + subTestAry + ", intAry=" + intAry + ", dblAry=" + dblAry + ", strAry=" + strAry + ", boolAry=" + boolAry + '}';
+            return "TestClass{" + "foo=" + foo + ", Bar=" + Bar + ", zenF=" + zenF + ", zenT=" + zenT + ", ben=" + ben + ", subTestAry=" + subTestAry + ", intAry=" + intAry + ", dblAry=" + dblAry + ", strAry=" + strAry + ", boolAry=" + boolAry + ", subItem=" + subItem + '}';
         }
 
     }
