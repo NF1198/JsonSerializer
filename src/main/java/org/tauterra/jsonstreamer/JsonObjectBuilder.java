@@ -17,6 +17,7 @@ package org.tauterra.jsonstreamer;
 
 import java.io.IOException;
 import java.io.Reader;
+import java.io.StreamTokenizer;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -132,6 +133,13 @@ public class JsonObjectBuilder<U> {
 
     public U parse(Reader jsonReader) throws IOException, JsonParser.MalformedJsonException {
         return parse(jsonReader, null);
+    }
+
+    public List<U> parseObjectArray(Reader jsonReader, List<U> destinationList) throws IOException, JsonParser.MalformedJsonException {
+        List<U> result = destinationList;
+        StreamTokenizer tok = JsonParser.getTokenizer(jsonReader);
+        JsonParser.ParseObjectArray(jsonReader, tok, () -> result, this);
+        return destinationList;
     }
 
     @SuppressWarnings("unchecked")

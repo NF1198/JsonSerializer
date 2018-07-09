@@ -20,7 +20,6 @@ import java.io.Reader;
 import java.io.StreamTokenizer;
 import static java.io.StreamTokenizer.*;
 import java.util.ArrayDeque;
-import java.util.ArrayList;
 import java.util.Deque;
 import java.util.List;
 import java.util.function.DoubleFunction;
@@ -30,7 +29,7 @@ import java.util.function.Supplier;
  *
  * @author Nicholas Folse <https://github.com/NF1198>
  */
-class JsonParser {
+public class JsonParser {
 
     public static final int TT_OBJBEGIN = (int) '{';
     public static final int TT_OBJEND = (int) '}';
@@ -192,11 +191,16 @@ class JsonParser {
         tok.pushBack();
         return result;
     }
-
-    static void ParseObject(Reader jsonReader, JsonParserState initState, BiConsumer<JsonEvent, StreamTokenizer> handler) throws IOException, MalformedJsonException {
-        StreamTokenizer tok = new StreamTokenizer(jsonReader);
+    
+    protected static StreamTokenizer getTokenizer(Reader reader) {
+        StreamTokenizer tok = new StreamTokenizer(reader);
         tok.eolIsSignificant(false);
         tok.quoteChar('\"');
+        return tok;
+    }
+
+    static void ParseObject(Reader jsonReader, JsonParserState initState, BiConsumer<JsonEvent, StreamTokenizer> handler) throws IOException, MalformedJsonException {
+        StreamTokenizer tok = getTokenizer(jsonReader);
 
         Deque<JsonParserState> stateStack = new ArrayDeque<>();
         stateStack.add(JsonParserState.HEAD);
