@@ -1,7 +1,17 @@
 /*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+ * Copyright 2018 Nicholas Folse <https://github.com/NF1198>.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package org.tauterra.jsonstreamer;
 
@@ -27,7 +37,7 @@ public class JsonObjectBuilder<U> {
     private final Map<String, BiConsumer<U, ? extends Object>> objectHandlers = new HashMap<>();
     private final Map<String, JsonObjectBuilder<? extends Object>> objectBuilders = new HashMap<>();
 
-    private BiConsumer<String, String> missingHandlerHandler = null;
+    private TriConsumer<U, String, String> missingHandlerHandler = null;
 
     public JsonObjectBuilder(Supplier<U> supplier) {
         this.supplier = supplier;
@@ -82,13 +92,13 @@ public class JsonObjectBuilder<U> {
         return this;
     }
 
-    public JsonObjectBuilder<U> missingElementHandler(BiConsumer<String, String> handler) {
+    public JsonObjectBuilder<U> missingElementHandler(TriConsumer<U, String, String> handler) {
         this.missingHandlerHandler = handler;
         return this;
     }
 
-    public BiConsumer<String, String> missingElementHandler() {
-        return this.missingHandlerHandler != null ? this.missingHandlerHandler : (v, w) -> {
+    public TriConsumer<U, String, String> missingElementHandler() {
+        return this.missingHandlerHandler != null ? this.missingHandlerHandler : (u, v, w) -> {
         };
     }
 
@@ -152,7 +162,7 @@ public class JsonObjectBuilder<U> {
             parseObjectArray(parser, result, objectHandler, objectBuilder);
             return result;
         } else {
-            missingElementHandler().accept(label, null);
+            missingElementHandler().accept(result, label, null);
             return result;
         }
     }
@@ -360,7 +370,7 @@ public class JsonObjectBuilder<U> {
                     if (stringHandler != null) {
                         stringHandler.accept(result, parser.sval());
                     } else {
-                        missingElementHandler().accept(label, parser.sval());
+                        missingElementHandler().accept(result, label, parser.sval());
                     }
                     break;
                 case VALUE_NUMBER:
@@ -368,7 +378,7 @@ public class JsonObjectBuilder<U> {
                     if (numberHandler != null) {
                         numberHandler.accept(result, parser.nval());
                     } else {
-                        missingElementHandler().accept(label, parser.nval().toString());
+                        missingElementHandler().accept(result, label, parser.nval().toString());
                     }
                     break;
                 case VALUE_FALSE:
@@ -377,7 +387,7 @@ public class JsonObjectBuilder<U> {
                     if (booleanHandler != null) {
                         booleanHandler.accept(result, parser.bval());
                     } else {
-                        missingElementHandler().accept(label, parser.sval());
+                        missingElementHandler().accept(result, label, parser.sval());
                     }
                     break;
                 case START_ARRAY:
@@ -398,7 +408,7 @@ public class JsonObjectBuilder<U> {
                     } else {
                         parser.pushBack();
                         consumeObject(parser);
-                        missingElementHandler().accept(label, parser.sval());
+                        missingElementHandler().accept(result, label, parser.sval());
                     }
                     break;
                 case VALUE_NULL:
