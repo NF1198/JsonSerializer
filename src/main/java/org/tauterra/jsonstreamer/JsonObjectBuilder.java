@@ -146,6 +146,7 @@ public class JsonObjectBuilder<U> {
             parseBooleanArray(parser, result, booleanHandler);
             return result;
         } else if (objectHandlers.containsKey(label) && objectBuilders.containsKey(label)) {
+            @SuppressWarnings("unchecked")
             BiConsumer<U, Object> objectHandler = (BiConsumer<U, Object>) objectHandlers.getOrDefault(label, null);
             JsonObjectBuilder<? extends Object> objectBuilder = objectBuilders.getOrDefault(label, null);
             parseObjectArray(parser, result, objectHandler, objectBuilder);
@@ -386,7 +387,9 @@ public class JsonObjectBuilder<U> {
                 case END_ARRAY:
                     break;
                 case START_OBJECT:
+                    @SuppressWarnings("unchecked")
                     BiConsumer<U, Object> objectHandler = (BiConsumer<U, Object>) objectHandlers.getOrDefault(label, null);
+                    @SuppressWarnings("unchecked")
                     JsonObjectBuilder<? extends Object> objectBuilder = objectBuilders.getOrDefault(label, null);
                     if (objectHandler != null && objectBuilder != null) {
                         parser.pushBack();
