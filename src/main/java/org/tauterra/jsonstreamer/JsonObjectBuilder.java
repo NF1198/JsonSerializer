@@ -429,6 +429,7 @@ public class JsonObjectBuilder<U> {
                     break;
             }
         }
+//        parser.pushBack();
         return result;
     }
 

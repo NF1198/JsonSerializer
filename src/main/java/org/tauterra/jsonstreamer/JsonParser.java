@@ -34,7 +34,7 @@ public class JsonParser {
     private boolean bval;
     private final StreamTokenizer tok;
     private final Deque<PState> stateStack;
-    private String label = null;
+    private Runnable undoStateChange = null;
 
     public static final int TT_OBJBEGIN = (int) '{';
     public static final int TT_OBJEND = (int) '}';
@@ -79,6 +79,10 @@ public class JsonParser {
 
     public void pushBack() {
         tok.pushBack();
+        if (undoStateChange != null) {
+            undoStateChange.run();
+            undoStateChange = null;
+        }
     }
 
     private void advance() throws IOException {
@@ -108,82 +112,128 @@ public class JsonParser {
         int ttype = tok.nextToken();
         switch (ttype) {
             case TT_ARRAYBEGIN:
-                label = null;
                 stateStack.addLast(PState.IN_ARRAY);
+                undoStateChange = () -> stateStack.removeLast();
                 this.currentEvent = Event.START_ARRAY;
                 return Event.START_ARRAY;
             case TT_ARRAYEND:
-                stateStack.removeLast();
+                assert stateStack.peekLast().equals(PState.IN_ARRAY);
+                PState last = stateStack.removeLast();
+                if (stateStack.size() > 0 && stateStack.peekLast().equals(PState.IN_KVP)) {
+                    PState last2 = stateStack.removeLast();
+                    undoStateChange = () -> {
+                        stateStack.addLast(last2);
+                        stateStack.addLast(last);
+                    };
+                } else {
+                    undoStateChange = () -> stateStack.addLast(last);
+                }
                 this.currentEvent = Event.END_ARRAY;
                 return Event.END_ARRAY;
             case TT_OBJBEGIN:
                 stateStack.addLast(PState.IN_OBJECT);
-                label = null;
+                undoStateChange = () -> stateStack.removeLast();
                 this.currentEvent = Event.START_OBJECT;
                 return Event.START_OBJECT;
             case TT_OBJEND:
-                stateStack.removeLast();
+                assert stateStack.peekLast().equals(PState.IN_OBJECT);
+                last = stateStack.removeLast();
+                if (stateStack.size() > 0 && stateStack.peekLast().equals(PState.IN_KVP)) {
+                    PState last2 = stateStack.removeLast();
+                    undoStateChange = () -> {
+                        stateStack.addLast(last2);
+                        stateStack.addLast(last);
+                    };
+                } else {
+                    undoStateChange = () -> stateStack.addLast(last);
+                }
                 this.currentEvent = Event.END_OBJECT;
                 return Event.END_OBJECT;
             case TT_QUOTE:
                 nval = 0d;
                 bval = false;
                 sval = tok.sval;
-                if (label == null) {
-                    label = sval;
-                    PState nestState = stateStack.peekLast();
-                    this.currentEvent = nestState.equals(PState.IN_ARRAY) ? Event.VALUE_STRING : Event.KEY_NAME;
-                    return this.currentEvent;
-                } else {
-                    label = null;
-                    this.currentEvent = Event.VALUE_STRING;
-                    return Event.VALUE_STRING;
+                PState nestState = stateStack.peekLast();
+                switch (nestState) {
+                    case IN_OBJECT:
+                        stateStack.addLast(PState.IN_KVP);
+                        undoStateChange = () -> stateStack.removeLast();
+                        this.currentEvent = Event.KEY_NAME;
+                        break;
+                    case IN_ARRAY:
+                        this.currentEvent = Event.VALUE_STRING;
+                        break;
+                    case IN_KVP:
+                        this.currentEvent = Event.VALUE_STRING;
+                        last = stateStack.removeLast();
+                        undoStateChange = () -> stateStack.addLast(last);
+                        break;
                 }
+                return this.currentEvent;
             case TT_COLON:
-                assert label != null;
+                assert stateStack.peekLast().equals(PState.IN_KVP);
                 break;
             case TT_NUMBER:
                 sval = tok.sval;
                 bval = tok.nval != 0;
                 nval = tok.nval;
-                label = null;
+                if (stateStack.peekLast().equals(PState.IN_KVP)) {
+                    last = stateStack.removeLast();
+                    undoStateChange = () -> stateStack.addLast(last);
+                }
                 this.currentEvent = Event.VALUE_NUMBER;
                 return Event.VALUE_NUMBER;
             case TT_WORD:
                 String wordVal = tok.sval.toLowerCase();
+                assert stateStack.peekLast().equals(PState.IN_KVP) || stateStack.peekLast().equals(PState.IN_ARRAY);
                 switch (wordVal) {
                     case "false":
                         nval = 0d;
                         sval = "false";
                         bval = false;
-                        label = null;
+                        if (stateStack.peekLast().equals(PState.IN_KVP)) {
+                            last = stateStack.removeLast();
+                            undoStateChange = () -> stateStack.addLast(last);
+                        }
                         this.currentEvent = Event.VALUE_FALSE;
                         return Event.VALUE_FALSE;
                     case "true":
                         nval = 1d;
                         sval = "true";
                         bval = true;
-                        label = null;
+                        if (stateStack.peekLast().equals(PState.IN_KVP)) {
+                            last = stateStack.removeLast();
+                            undoStateChange = () -> stateStack.addLast(last);
+                        }
                         this.currentEvent = Event.VALUE_TRUE;
                         return Event.VALUE_TRUE;
                     case "null":
                         nval = Double.NaN;
                         sval = "null";
                         bval = false;
-                        label = null;
+                        if (stateStack.size() > 0 && stateStack.peekLast().equals(PState.IN_KVP)) {
+                            last = stateStack.removeLast();
+                            undoStateChange = () -> stateStack.addLast(last);
+                        }
                         this.currentEvent = Event.VALUE_NULL;
-                        return Event.VALUE_NULL;
+                        return this.currentEvent;
                     default:
-                        break;
+                        System.out.println(tok);
+                        if (stateStack.size() > 0 && stateStack.peekLast().equals(PState.IN_KVP)) {
+                            last = stateStack.removeLast();
+                            undoStateChange = () -> stateStack.addLast(last);
+                        }
+                        this.currentEvent = Event.VALUE_NULL;
+                        return this.currentEvent;
                 }
-                System.out.println(tok);
-                assert false; // unquoted strings not allowed
-                break;
+
             default:
                 this.currentEvent = null;
                 return null;
         }
+
         this.currentEvent = null;
+
         return null;
     }
 
@@ -202,7 +252,8 @@ public class JsonParser {
 
     private static enum PState {
         IN_ARRAY,
-        IN_OBJECT
+        IN_OBJECT,
+        IN_KVP
     }
 
 }

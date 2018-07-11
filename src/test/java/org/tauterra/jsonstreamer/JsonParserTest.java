@@ -22,9 +22,10 @@ public class JsonParserTest {
             + "\"car\":true, "
             + "\"nested\": { \"foo\":\"bfoo\", \"bar\":-11, \"car\":false },"
             + "\"sarray\": [1, 3, \"car\", {\"foo\":23}, false, null],"
-            + "\"narray\": [1, 3, \"car\", {\"foo\":23}, false, null],"
-            + "\"barray\": [1, 3, \"car\", {\"foo\":23}, false, null],"
-            + "\"oarray\": [1, 3, \"car\", {\"foo\":23}, false, null],"
+            + "\"narray\": [1, 3, \"car\", {\"foo\":24}, false, null],"
+            + "\"barray\": [1, 3, \"car\", {\"foo\":25}, false, null],"
+            + "\"oarray\": [1, 3, \"car\", {\"foo\":26}, false, null],"
+            + "\"otherobj\": {\"car\": true}"
             + "}";
 
     final StringReader reader = new StringReader(json);
@@ -47,9 +48,6 @@ public class JsonParserTest {
                     break;
                 case VALUE_STRING:
                     System.out.println("String: " + instance.sval());
-                    break;
-                case VALUE_NULL:
-                    System.out.println("(null)");
                     break;
                 default:
                     System.out.println(event);

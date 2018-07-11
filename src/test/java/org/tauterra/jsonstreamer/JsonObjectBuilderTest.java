@@ -30,6 +30,7 @@ public class JsonObjectBuilderTest {
             + "\"narray\": [1, 3, \"car\", {\"foo\":23}, false, null],"
             + "\"barray\": [1, 3, \"car\", {\"foo\":23}, false, null],"
             + "\"oarray\": [1, 3, \"car\", {\"bar\":23444}, false, null],"
+            + "\"dar\": {\"car\": true}"
             + "}";
     
     final static String arrayOfSimpleJson = "["
@@ -78,6 +79,7 @@ public class JsonObjectBuilderTest {
         simpleBuilder.booleanHandler("barray", (o, v) -> o.barray.add(v));
         simpleBuilder.objectHandler("oarray", simpleBuilder, (o, v) -> o.oarray.add(v));
         simpleBuilder.objectHandler("nested", simpleBuilder, (o, v) -> o.nested = v);
+        simpleBuilder.objectHandler("dar", simpleBuilder, (o, v) -> o.dar = v);
 
         JsonParser parser = new JsonParser(new ByteArrayInputStream(simpleJson.getBytes()));
         Simple simple = simpleBuilder.parseObject(parser);
@@ -124,6 +126,7 @@ public class JsonObjectBuilderTest {
         public Double bar;
         public Boolean car;
         public Simple nested;
+        public Simple dar;
         public List<String> sarray = new ArrayList<>();
         public List<Double> narray = new ArrayList<>();
         public List<Boolean> barray = new ArrayList<>();
@@ -140,6 +143,7 @@ public class JsonObjectBuilderTest {
                     + ",\n barray= [" + barray.stream().map(o -> o == null ? false : o).map(Object::toString).collect(Collectors.joining(", ")) + "]"
                     + ",\n oarray= [" + oarray.stream().map(o -> o == null ? "<>" : o).map(Object::toString).collect(Collectors.joining(", ")) + "]"
                     + ",\n nested=" + nested
+                    + ",\n dar=" + dar
                     + "\n}";
         }
 
