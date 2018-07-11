@@ -42,7 +42,7 @@ A compact, code-efficient JSON serializer and parser using a builder pattern
     void test() {
       String jsonString = "..."; // JSON string data
       InputStream is = new ByteArrayInputStream(jsonString.getBytes());
-      TestClass objInstance = testClassBuilder.parse(new JsonParser(is));
+      TestClass objInstance = testClassBuilder.parseObject(new JsonParser(is));
     }
 
 ## JSON Streamer
@@ -126,7 +126,7 @@ from http://json.org/example.html
     glossaryParser = glWrapperBuilder;
     
     InputStream is = GlossaryJSON.class.getResourceAsStream("/json/glossary.json");
-    Glossary g = glossaryParser.parse(new JsonParser(is));
+    Glossary g = glossaryParser.parseObject(new JsonParser(is));
         
 ## glossary streamer
 
