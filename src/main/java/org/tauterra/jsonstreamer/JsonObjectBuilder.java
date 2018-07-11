@@ -20,6 +20,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import org.tauterra.jsonstreamer.JsonParser.Event;
 
@@ -143,10 +144,45 @@ public class JsonObjectBuilder<U> {
         parser.pushBack();
     }
 
-    public List<U> parseArrayOf(JsonParser parser, List<U> target) throws IOException, JsonObjectParserException {
-        JsonObjectBuilder<List<U>> wrapper = new JsonObjectBuilder<>(() -> target);
-        wrapper.parseObjectArray(parser, target, (t, e) -> t.add(e), this);
-        return target;
+    public void parseArrayOf(JsonParser parser, Consumer<U> elementHandler) throws IOException, JsonObjectParserException {
+        Event next = parser.next();
+        if (!next.equals(Event.START_ARRAY)) {
+            throw new JsonObjectParserException("Expected array start");
+        }
+        while (!parser.next().equals(Event.END_ARRAY)) {
+            Event currentEvent = parser.currentEvent();
+            switch (currentEvent) {
+                case END_OBJECT:
+                    break;
+                case KEY_NAME:
+                    assert false; // should never get here
+                    break;
+                case VALUE_STRING:
+                    elementHandler.accept(null);
+                    break;
+                case VALUE_NUMBER:
+                    elementHandler.accept(null);
+                    break;
+                case VALUE_FALSE:
+                case VALUE_TRUE:
+                    elementHandler.accept(null);
+                    break;
+                case START_ARRAY:
+                    elementHandler.accept(null);
+                    parser.pushBack();
+                    consumeArray(parser);
+                    break;
+                case END_ARRAY:
+                    break;
+                case START_OBJECT:
+                    parser.pushBack();
+                    elementHandler.accept(this.parseObject(parser));
+                    break;
+                case VALUE_NULL:
+                    elementHandler.accept(null);
+                    break;
+            }
+        }
     }
 
     private U parseArray(JsonParser parser, U result, String label) throws IOException, JsonObjectParserException {

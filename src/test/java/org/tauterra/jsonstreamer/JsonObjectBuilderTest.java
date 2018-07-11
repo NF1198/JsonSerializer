@@ -62,8 +62,9 @@ public class JsonObjectBuilderTest {
                 .numberHandler("bar", (o, v) -> o.bar = v);
 
         JsonParser parser = new JsonParser(new ByteArrayInputStream(arrayOfSimpleJson.getBytes()));
-        List<Simple> simple = simpleBuilder.parseArrayOf(parser, new ArrayList<>());
-        System.out.println(simple);
+        List<Simple> target = new ArrayList<>();
+        simpleBuilder.parseArrayOf(parser, (v) -> target.add(v));
+        System.out.println(target);
     }
     
     @Test
