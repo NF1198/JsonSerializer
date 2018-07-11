@@ -118,15 +118,15 @@ public class JsonParser {
                 return Event.START_ARRAY;
             case TT_ARRAYEND:
                 assert stateStack.peekLast().equals(PState.IN_ARRAY);
-                PState last = stateStack.removeLast();
+                stateStack.removeLast();
                 if (stateStack.size() > 0 && stateStack.peekLast().equals(PState.IN_KVP)) {
-                    PState last2 = stateStack.removeLast();
+                    stateStack.removeLast();
                     undoStateChange = () -> {
-                        stateStack.addLast(last2);
-                        stateStack.addLast(last);
+                        stateStack.addLast(PState.IN_KVP);
+                        stateStack.addLast(PState.IN_ARRAY);
                     };
                 } else {
-                    undoStateChange = () -> stateStack.addLast(last);
+                    undoStateChange = () -> stateStack.addLast(PState.IN_ARRAY);
                 }
                 this.currentEvent = Event.END_ARRAY;
                 return Event.END_ARRAY;
@@ -137,15 +137,15 @@ public class JsonParser {
                 return Event.START_OBJECT;
             case TT_OBJEND:
                 assert stateStack.peekLast().equals(PState.IN_OBJECT);
-                last = stateStack.removeLast();
+                stateStack.removeLast();
                 if (stateStack.size() > 0 && stateStack.peekLast().equals(PState.IN_KVP)) {
-                    PState last2 = stateStack.removeLast();
+                    stateStack.removeLast();
                     undoStateChange = () -> {
-                        stateStack.addLast(last2);
-                        stateStack.addLast(last);
+                        stateStack.addLast(PState.IN_KVP);
+                        stateStack.addLast(PState.IN_OBJECT);
                     };
                 } else {
-                    undoStateChange = () -> stateStack.addLast(last);
+                    undoStateChange = () -> stateStack.addLast(PState.IN_OBJECT);
                 }
                 this.currentEvent = Event.END_OBJECT;
                 return Event.END_OBJECT;
@@ -165,8 +165,8 @@ public class JsonParser {
                         break;
                     case IN_KVP:
                         this.currentEvent = Event.VALUE_STRING;
-                        last = stateStack.removeLast();
-                        undoStateChange = () -> stateStack.addLast(last);
+                        stateStack.removeLast();
+                        undoStateChange = () -> stateStack.addLast(PState.IN_KVP);
                         break;
                 }
                 return this.currentEvent;
@@ -178,8 +178,8 @@ public class JsonParser {
                 bval = tok.nval != 0;
                 nval = tok.nval;
                 if (stateStack.peekLast().equals(PState.IN_KVP)) {
-                    last = stateStack.removeLast();
-                    undoStateChange = () -> stateStack.addLast(last);
+                    stateStack.removeLast();
+                    undoStateChange = () -> stateStack.addLast(PState.IN_KVP);
                 }
                 this.currentEvent = Event.VALUE_NUMBER;
                 return Event.VALUE_NUMBER;
@@ -192,8 +192,8 @@ public class JsonParser {
                         sval = "false";
                         bval = false;
                         if (stateStack.peekLast().equals(PState.IN_KVP)) {
-                            last = stateStack.removeLast();
-                            undoStateChange = () -> stateStack.addLast(last);
+                            stateStack.removeLast();
+                            undoStateChange = () -> stateStack.addLast(PState.IN_KVP);
                         }
                         this.currentEvent = Event.VALUE_FALSE;
                         return Event.VALUE_FALSE;
@@ -202,8 +202,8 @@ public class JsonParser {
                         sval = "true";
                         bval = true;
                         if (stateStack.peekLast().equals(PState.IN_KVP)) {
-                            last = stateStack.removeLast();
-                            undoStateChange = () -> stateStack.addLast(last);
+                            stateStack.removeLast();
+                            undoStateChange = () -> stateStack.addLast(PState.IN_KVP);
                         }
                         this.currentEvent = Event.VALUE_TRUE;
                         return Event.VALUE_TRUE;
@@ -212,16 +212,16 @@ public class JsonParser {
                         sval = "null";
                         bval = false;
                         if (stateStack.size() > 0 && stateStack.peekLast().equals(PState.IN_KVP)) {
-                            last = stateStack.removeLast();
-                            undoStateChange = () -> stateStack.addLast(last);
+                            stateStack.removeLast();
+                            undoStateChange = () -> stateStack.addLast(PState.IN_KVP);
                         }
                         this.currentEvent = Event.VALUE_NULL;
                         return this.currentEvent;
                     default:
                         System.out.println(tok);
                         if (stateStack.size() > 0 && stateStack.peekLast().equals(PState.IN_KVP)) {
-                            last = stateStack.removeLast();
-                            undoStateChange = () -> stateStack.addLast(last);
+                            stateStack.removeLast();
+                            undoStateChange = () -> stateStack.addLast(PState.IN_KVP);
                         }
                         this.currentEvent = Event.VALUE_NULL;
                         return this.currentEvent;
