@@ -17,6 +17,7 @@ package org.tauterra.jsonstreamer;
 
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
@@ -141,6 +142,12 @@ public class JsonObjectBuilder<U> {
         }
         parser.pushBack();
     }
+    
+    public List<U> parseArrayOf(JsonParser parser, List<U> target) throws IOException, JsonObjectParserException {
+        JsonObjectBuilder<List<U>> wrapper = new JsonObjectBuilder<>(() -> target);
+        wrapper.parseObjectArray(parser, target, (t, e) -> t.add(e), this);
+        return target;
+    }
 
     private U parseArray(JsonParser parser, U result, String label) throws IOException, JsonObjectParserException {
         if (stringHandlers.containsKey(label)) {
@@ -158,7 +165,7 @@ public class JsonObjectBuilder<U> {
         } else if (objectHandlers.containsKey(label) && objectBuilders.containsKey(label)) {
             @SuppressWarnings("unchecked")
             BiConsumer<U, Object> objectHandler = (BiConsumer<U, Object>) objectHandlers.getOrDefault(label, null);
-            JsonObjectBuilder<? extends Object> objectBuilder = objectBuilders.getOrDefault(label, null);
+            JsonObjectBuilder<Object> objectBuilder = (JsonObjectBuilder<Object>)objectBuilders.getOrDefault(label, null);
             parseObjectArray(parser, result, objectHandler, objectBuilder);
             return result;
         } else {
@@ -302,7 +309,7 @@ public class JsonObjectBuilder<U> {
         return target;
     }
 
-    public U parseObjectArray(JsonParser parser, U target, BiConsumer<U, Object> objectHandler, JsonObjectBuilder<? extends Object> builder) throws IOException, JsonObjectParserException {
+    public <P> U parseObjectArray(JsonParser parser, U target, BiConsumer<U, P> objectHandler, JsonObjectBuilder<P> builder) throws IOException, JsonObjectParserException {
         Event next = parser.next();
         if (!next.equals(Event.START_ARRAY)) {
             throw new JsonObjectParserException("Expected array start");

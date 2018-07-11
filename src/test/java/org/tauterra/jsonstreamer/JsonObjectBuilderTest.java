@@ -31,6 +31,13 @@ public class JsonObjectBuilderTest {
             + "\"barray\": [1, 3, \"car\", {\"foo\":23}, false, null],"
             + "\"oarray\": [1, 3, \"car\", {\"bar\":23444}, false, null],"
             + "}";
+    
+    final static String arrayOfSimpleJson = "["
+            + "{\"bar\":1},"
+            + "{\"bar\":2},"
+            + "{\"bar\":3},"
+            + "{\"bar\":4},"
+            + "]";
 
     final static String json = "{ \"foo\":23, "
             + "\"Bar\":\"car\", "
@@ -46,6 +53,18 @@ public class JsonObjectBuilderTest {
             + "\"subTest\" : {\"foo\": 99}, "
             + "}";
 
+    @Test
+    public void testParseArrayOf() throws Exception {
+        System.out.println("JsonObjectBuilderNG Test::parseArrayOf");
+
+        JsonObjectBuilder<Simple> simpleBuilder = new JsonObjectBuilder<>(() -> new Simple())
+                .numberHandler("bar", (o, v) -> o.bar = v);
+
+        JsonParser parser = new JsonParser(new ByteArrayInputStream(arrayOfSimpleJson.getBytes()));
+        List<Simple> simple = simpleBuilder.parseArrayOf(parser, new ArrayList<>());
+        System.out.println(simple);
+    }
+    
     @Test
     public void testParseObject() throws Exception {
         System.out.println("JsonObjectBuilderNG Test::parseObject");
