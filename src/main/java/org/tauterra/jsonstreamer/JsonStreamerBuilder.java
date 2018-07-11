@@ -475,7 +475,7 @@ public class JsonStreamerBuilder<T> {
     }
 
     private static String quoted(Object obj) {
-        return MessageFormat.format("\"{0}\"", obj.toString());
+        return obj != null ? MessageFormat.format("\"{0}\"", obj.toString()) : "null";
     }
 
     private static String spaces(int len) {

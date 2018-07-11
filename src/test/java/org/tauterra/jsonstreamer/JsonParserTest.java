@@ -1,23 +1,14 @@
 /*
- * Copyright 2018 Nicholas Folse <https://github.com/NF1198>.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
  */
 package org.tauterra.jsonstreamer;
 
+import java.io.ByteArrayInputStream;
 import java.io.StringReader;
-import java.text.MessageFormat;
 import org.junit.Test;
+import org.tauterra.jsonstreamer.JsonParser.Event;
 
 /**
  *
@@ -25,48 +16,46 @@ import org.junit.Test;
  */
 public class JsonParserTest {
 
+    final String json = "{ "
+            + "\"foo\":\"afoo\", "
+            + "\"bar\":23, "
+            + "\"car\":true, "
+            + "\"nested\": { \"foo\":\"bfoo\", \"bar\":-11, \"car\":false },"
+            + "\"sarray\": [1, 3, \"car\", {\"foo\":23}, false, null],"
+            + "\"narray\": [1, 3, \"car\", {\"foo\":23}, false, null],"
+            + "\"barray\": [1, 3, \"car\", {\"foo\":23}, false, null],"
+            + "\"oarray\": [1, 3, \"car\", {\"foo\":23}, false, null],"
+            + "}";
+
+    final StringReader reader = new StringReader(json);
+
     public JsonParserTest() {
     }
 
     @Test
-    public void testParse() throws Exception {
-        System.out.println("JsonParser test");
-
-        final String json = "{ \"foo\":23, "
-                + "\"Bar\":\"car\", "
-                + "\"zen\":false, "
-                + "\"ben\":{\"foo\":923},"
-                + "\"ary\":[2, \"two\", { \"aKey\":93 }]"
-                + "}";
-        final StringReader reader = new StringReader(json);
-
-        JsonParser.ParseObject(reader, (a, b) -> {
-            String event = a.toString();
-            String value = "";
-            switch (a) {
-                case BOOLEAN_T:
-                case BOOLEAN_F:
-                    value = b.sval;
+    public void testNext() throws Exception {
+        System.out.println("JsonParserNG Test");
+        JsonParser instance = new JsonParser(new ByteArrayInputStream(json.getBytes()));
+        while (instance.hasNext()) {
+            Event event = instance.next();
+            switch (event) {
+                case KEY_NAME:
+                    System.out.println("Key: " + instance.sval());
                     break;
-                case END_OBJECT:
-                    value = "}";
+                case VALUE_NUMBER:
+                    System.out.println("Number: " + instance.nval());
                     break;
-                case START_OBJECT:
-                    value = "{";
+                case VALUE_STRING:
+                    System.out.println("String: " + instance.sval());
                     break;
-                case LABEL:
-                    value = "\"" + b.sval + "\"";
+                case VALUE_NULL:
+                    System.out.println("(null)");
                     break;
-                case NUMBER:
-                    value = Double.toString(b.nval);
-                    break;
-                case STRING:
-                    value = "\"" + b.sval + "\"";
-                    break;
+                default:
+                    System.out.println(event);
             }
-            System.out.println(MessageFormat.format("event: {0}, value: {1}", event, value));
-        });
 
+        }
     }
 
 }

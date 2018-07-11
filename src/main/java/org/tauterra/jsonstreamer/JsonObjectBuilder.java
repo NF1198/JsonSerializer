@@ -1,254 +1,428 @@
 /*
- * Copyright 2018 Nicholas Folse <https://github.com/NF1198>.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * To change this license header, choose License Headers in Project Properties.
+ * To change this template file, choose Tools | Templates
+ * and open the template in the editor.
  */
 package org.tauterra.jsonstreamer;
 
 import java.io.IOException;
-import java.io.Reader;
-import java.io.StreamTokenizer;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
 import java.util.function.Supplier;
-import static org.tauterra.jsonstreamer.JsonParser.JsonEvent.*;
-import org.tauterra.jsonstreamer.JsonParser.JsonParserState;
+import org.tauterra.jsonstreamer.JsonParser.Event;
 
 /**
  *
  * @author Nicholas Folse <https://github.com/NF1198>
+ * @param <U> Object builder of type U
  */
 public class JsonObjectBuilder<U> {
 
     private final Supplier<U> supplier;
+
     private final Map<String, BiConsumer<U, String>> stringHandlers = new HashMap<>();
     private final Map<String, BiConsumer<U, Double>> numberHandlers = new HashMap<>();
     private final Map<String, BiConsumer<U, Boolean>> booleanHandlers = new HashMap<>();
     private final Map<String, BiConsumer<U, ? extends Object>> objectHandlers = new HashMap<>();
-    private final Map<String, JsonObjectBuilder<? extends Object>> builderMap = new HashMap<>();
+    private final Map<String, JsonObjectBuilder<? extends Object>> objectBuilders = new HashMap<>();
 
-    private final Map<String, BiConsumer<U, List<Integer>>> intArrayHandlers = new HashMap<>();
-    private final Map<String, BiConsumer<U, List<Double>>> doubleArrayHandlers = new HashMap<>();
-    private final Map<String, BiConsumer<U, List<Boolean>>> booleanArrayHandlers = new HashMap<>();
-    private final Map<String, BiConsumer<U, List<String>>> stringArrayHandlers = new HashMap<>();
-    private final Map<String, BiConsumer<U, List>> objectArrayHandlers = new HashMap<>();
-
-    private MissingElementHandler<U> missingElementHandler = null;
+    private BiConsumer<String, String> missingHandlerHandler = null;
 
     public JsonObjectBuilder(Supplier<U> supplier) {
         this.supplier = supplier;
     }
 
-    public JsonObjectBuilder<U> addStringHandler(String label, BiConsumer<U, String> handler) {
-        removeKey(label);
+    public boolean hasHandler(String label) {
+        if (stringHandlers.containsKey(label)) {
+            return true;
+        }
+        if (numberHandlers.containsKey(label)) {
+            return true;
+        }
+        if (booleanHandlers.containsKey(label)) {
+            return true;
+        }
+        if (objectHandlers.containsKey(label)) {
+            return true;
+        }
+        return false;
+    }
+
+    public void removeHandler(String label) {
+        stringHandlers.remove(label);
+        numberHandlers.remove(label);
+        booleanHandlers.remove(label);
+        objectHandlers.remove(label);
+        objectBuilders.remove(label);
+    }
+
+    public JsonObjectBuilder<U> stringHandler(String label, BiConsumer<U, String> handler) {
+        removeHandler(label);
         stringHandlers.put(label, handler);
         return this;
     }
 
-    public JsonObjectBuilder<U> addNumberHandler(String label, BiConsumer<U, Double> handler) {
-        removeKey(label);
+    public JsonObjectBuilder<U> numberHandler(String label, BiConsumer<U, Double> handler) {
+        removeHandler(label);
         numberHandlers.put(label, handler);
         return this;
     }
 
-    public JsonObjectBuilder<U> addBooleanHandler(String label, BiConsumer<U, Boolean> handler) {
-        removeKey(label);
+    public JsonObjectBuilder<U> booleanHandler(String label, BiConsumer<U, Boolean> handler) {
+        removeHandler(label);
         booleanHandlers.put(label, handler);
         return this;
     }
 
-    public <V> JsonObjectBuilder<U> addObjectHandler(String label, BiConsumer<U, V> handler, JsonObjectBuilder<V> objBldr) {
-        removeKey(label);
+    public <V> JsonObjectBuilder<U> objectHandler(String label, JsonObjectBuilder<V> builder, BiConsumer<U, V> handler) {
+        removeHandler(label);
         objectHandlers.put(label, handler);
-        builderMap.put(label, objBldr);
+        objectBuilders.put(label, builder);
         return this;
     }
 
-    public JsonObjectBuilder<U> addIntegerArrayHandler(String label, BiConsumer<U, List<Integer>> handler) {
-        removeKey(label);
-        intArrayHandlers.put(label, handler);
+    public JsonObjectBuilder<U> missingElementHandler(BiConsumer<String, String> handler) {
+        this.missingHandlerHandler = handler;
         return this;
     }
 
-    public JsonObjectBuilder<U> addDoubleArrayHandler(String label, BiConsumer<U, List<Double>> handler) {
-        removeKey(label);
-        doubleArrayHandlers.put(label, handler);
-        return this;
-    }
-
-    public JsonObjectBuilder<U> addBooleanArrayHandler(String label, BiConsumer<U, List<Boolean>> handler) {
-        removeKey(label);
-        booleanArrayHandlers.put(label, handler);
-        return this;
-    }
-
-    public JsonObjectBuilder<U> addStringArrayHandler(String label, BiConsumer<U, List<String>> handler) {
-        removeKey(label);
-        stringArrayHandlers.put(label, handler);
-        return this;
-    }
-
-    public <V> JsonObjectBuilder<U> addObjectArrayHandler(String label, BiConsumer<U, List> handler, JsonObjectBuilder<V> objBldr) {
-        removeKey(label);
-        objectArrayHandlers.put(label, handler);
-        builderMap.put(label, objBldr);
-        return this;
-    }
-
-    public JsonObjectBuilder<U> setMissingElementHandler(MissingElementHandler<U> handler) {
-        this.missingElementHandler = handler;
-        return this;
-    }
-
-    private void removeKey(String key) {
-        stringHandlers.remove(key);
-        numberHandlers.remove(key);
-        booleanHandlers.remove(key);
-        objectHandlers.remove(key);
-        builderMap.remove(key);
-        intArrayHandlers.remove(key);
-    }
-
-    private MissingElementHandler<U> getMissingElementHandler() {
-        return (missingElementHandler != null) ? missingElementHandler : (a, b, c, d) -> {
+    public BiConsumer<String, String> missingElementHandler() {
+        return this.missingHandlerHandler != null ? this.missingHandlerHandler : (v, w) -> {
         };
     }
 
-    public Function<Reader, U> build() {
-        return (Reader r) -> parse(r);
-    }
-
-    public U parse(Reader jsonReader) throws IOException, JsonParser.MalformedJsonException {
-        return parse(jsonReader, null);
-    }
-
-    public List<U> parseObjectArray(Reader jsonReader, List<U> destinationList) throws IOException, JsonParser.MalformedJsonException {
-        List<U> result = destinationList;
-        StreamTokenizer tok = JsonParser.getTokenizer(jsonReader);
-        JsonParser.ParseObjectArray(jsonReader, tok, () -> result, this);
-        return destinationList;
-    }
-
-    @SuppressWarnings("unchecked")
-    U parse(Reader jsonReader, JsonParserState initState) throws IOException, JsonParser.MalformedJsonException {
-        U obj = this.supplier.get();
-
-        String[] label = new String[]{null};
-
-        JsonParser.ParseObject(jsonReader, initState, (event, tok) -> {
+    private void consumeObject(JsonParser parser) throws IOException, JsonObjectParserException {
+        Event event = parser.next();
+        if (!event.equals(Event.START_OBJECT)) {
+            throw new JsonObjectParserException("Expected object start (line: " + parser.line() + ")");
+        }
+        int depth = 1;
+        while (depth > 0) {
+            event = parser.next();
             switch (event) {
-                case LABEL:
-                    label[0] = tok.sval;
+                case START_OBJECT:
+                    depth++;
                     break;
-                case NUMBER:
-                    if (label != null) {
-                        if (!numberHandlers.containsKey(label[0])) {
-                            getMissingElementHandler().accept(obj, event, label[0], Double.toString(tok.nval));
-                            break;
-                        }
-                        numberHandlers.getOrDefault(label[0], (a, b) -> {
-                        }).accept(obj, tok.nval);
-                    }
+                case END_OBJECT:
+                    depth--;
                     break;
-                case STRING:
-                    if (label != null) {
-                        if (!stringHandlers.containsKey(label[0])) {
-                            getMissingElementHandler().accept(obj, event, label[0], tok.sval);
-                            break;
-                        }
-                        stringHandlers.getOrDefault(label[0], (a, b) -> {
-                        }).accept(obj, tok.sval);
-                    }
+            }
+        }
+        parser.pushBack();
+    }
+
+    private void consumeArray(JsonParser parser) throws IOException, JsonObjectParserException {
+        Event event = parser.next();
+        if (!event.equals(Event.START_ARRAY)) {
+            throw new JsonObjectParserException("Expected array start.");
+        }
+        int depth = 1;
+        while (depth > 0) {
+            event = parser.next();
+            switch (event) {
+                case START_ARRAY:
+                    depth++;
                     break;
-                case BOOLEAN_T:
-                    if (label != null) {
-                        if (!booleanHandlers.containsKey(label[0])) {
-                            getMissingElementHandler().accept(obj, event, label[0], "true");
-                            break;
-                        }
-                        booleanHandlers.getOrDefault(label[0], (a, b) -> {
-                        }).accept(obj, true);
-                    }
+                case END_ARRAY:
+                    depth--;
                     break;
-                case BOOLEAN_F:
-                    if (label != null) {
-                        if (!booleanHandlers.containsKey(label[0])) {
-                            getMissingElementHandler().accept(obj, event, label[0], "false");
-                            break;
-                        }
-                        booleanHandlers.getOrDefault(label[0], (a, b) -> {
-                        }).accept(obj, false);
-                    }
+            }
+        }
+        parser.pushBack();
+    }
+
+    private U parseArray(JsonParser parser, U result, String label) throws IOException, JsonObjectParserException {
+        if (stringHandlers.containsKey(label)) {
+            BiConsumer<U, String> stringHandler = stringHandlers.get(label);
+            parseStringArray(parser, result, stringHandler);
+            return result;
+        } else if (numberHandlers.containsKey(label)) {
+            BiConsumer<U, Double> numberHandler = numberHandlers.get(label);
+            parseNumberArray(parser, result, numberHandler);
+            return result;
+        } else if (booleanHandlers.containsKey(label)) {
+            BiConsumer<U, Boolean> booleanHandler = booleanHandlers.get(label);
+            parseBooleanArray(parser, result, booleanHandler);
+            return result;
+        } else if (objectHandlers.containsKey(label) && objectBuilders.containsKey(label)) {
+            BiConsumer<U, Object> objectHandler = (BiConsumer<U, Object>) objectHandlers.getOrDefault(label, null);
+            JsonObjectBuilder<? extends Object> objectBuilder = objectBuilders.getOrDefault(label, null);
+            parseObjectArray(parser, result, objectHandler, objectBuilder);
+            return result;
+        } else {
+            missingElementHandler().accept(label, null);
+            return result;
+        }
+    }
+
+    public U parseStringArray(JsonParser parser, U target, BiConsumer<U, String> stringHandler) throws IOException, JsonObjectParserException {
+        Event next = parser.next();
+        if (!next.equals(Event.START_ARRAY)) {
+            throw new JsonObjectParserException("Expected array start");
+        }
+        U result = target;
+        while (!parser.next().equals(Event.END_ARRAY)) {
+            Event currentEvent = parser.currentEvent();
+            switch (currentEvent) {
+                case END_OBJECT:
+                    break;
+                case KEY_NAME:
+                    assert false; // should never get here
+                    break;
+                case VALUE_STRING:
+                    stringHandler.accept(result, parser.sval());
+                    break;
+                case VALUE_NUMBER:
+                    stringHandler.accept(result, parser.nval().toString());
+                    break;
+                case VALUE_FALSE:
+                case VALUE_TRUE:
+                    stringHandler.accept(result, parser.sval());
+                    break;
+                case START_ARRAY:
+                    stringHandler.accept(result, null);
+                    parser.pushBack();
+                    consumeArray(parser);
+                    break;
+                case END_ARRAY:
                     break;
                 case START_OBJECT:
-                    if (label[0] != null) {
-                        JsonObjectBuilder blder = builderMap.get(label[0]);
-                        if (blder == null) {
-                            getMissingElementHandler().accept(obj, event, label[0], null);
-                            break;
-                        }
-                        Object subObj = blder.parse(jsonReader, JsonParserState.INOBJECT);
-                        @SuppressWarnings("unchecked")
-                        BiConsumer<U, Object> handler = (BiConsumer<U, Object>) objectHandlers.getOrDefault(label[0], (a, b) -> {
-                        });
-                        handler.accept(obj, subObj);
+                    stringHandler.accept(result, null);
+                    parser.pushBack();
+                    consumeObject(parser);
+                    break;
+                case VALUE_NULL:
+                    stringHandler.accept(result, null);
+                    break;
+            }
+        }
+        parser.pushBack();
+        return target;
+    }
+
+    public U parseNumberArray(JsonParser parser, U target, BiConsumer<U, Double> numberHandler) throws IOException, JsonObjectParserException {
+        Event next = parser.next();
+        if (!next.equals(Event.START_ARRAY)) {
+            throw new JsonObjectParserException("Expected array start");
+        }
+        U result = target;
+        while (!parser.next().equals(Event.END_ARRAY)) {
+            Event currentEvent = parser.currentEvent();
+            switch (currentEvent) {
+                case END_OBJECT:
+                    break;
+                case KEY_NAME:
+                    assert false; // should never get here
+                    break;
+                case VALUE_STRING:
+                    numberHandler.accept(result, parser.nval());
+                    break;
+                case VALUE_NUMBER:
+                    numberHandler.accept(result, parser.nval());
+                    break;
+                case VALUE_FALSE:
+                case VALUE_TRUE:
+                    numberHandler.accept(result, parser.nval());
+                    break;
+                case START_ARRAY:
+                    numberHandler.accept(result, null);
+                    parser.pushBack();
+                    consumeArray(parser);
+                    break;
+                case END_ARRAY:
+                    break;
+                case START_OBJECT:
+                    numberHandler.accept(result, null);
+                    parser.pushBack();
+                    consumeObject(parser);
+                    break;
+                case VALUE_NULL:
+                    numberHandler.accept(result, null);
+                    break;
+            }
+        }
+        parser.pushBack();
+        return target;
+    }
+
+    public U parseBooleanArray(JsonParser parser, U target, BiConsumer<U, Boolean> booleanHandler) throws IOException, JsonObjectParserException {
+        Event next = parser.next();
+        if (!next.equals(Event.START_ARRAY)) {
+            throw new JsonObjectParserException("Expected array start");
+        }
+        U result = target;
+        while (!parser.next().equals(Event.END_ARRAY)) {
+            Event currentEvent = parser.currentEvent();
+            switch (currentEvent) {
+                case END_OBJECT:
+                    break;
+                case KEY_NAME:
+                    assert false; // should never get here
+                    break;
+                case VALUE_STRING:
+                    booleanHandler.accept(result, parser.bval());
+                    break;
+                case VALUE_NUMBER:
+                    booleanHandler.accept(result, parser.bval());
+                    break;
+                case VALUE_FALSE:
+                case VALUE_TRUE:
+                    booleanHandler.accept(result, parser.bval());
+                    break;
+                case START_ARRAY:
+                    booleanHandler.accept(result, null);
+                    parser.pushBack();
+                    consumeArray(parser);
+                    break;
+                case END_ARRAY:
+                    break;
+                case START_OBJECT:
+                    booleanHandler.accept(result, null);
+                    parser.pushBack();
+                    consumeObject(parser);
+                    break;
+                case VALUE_NULL:
+                    booleanHandler.accept(result, null);
+                    break;
+            }
+        }
+        parser.pushBack();
+        return target;
+    }
+
+    public U parseObjectArray(JsonParser parser, U target, BiConsumer<U, Object> objectHandler, JsonObjectBuilder<? extends Object> builder) throws IOException, JsonObjectParserException {
+        Event next = parser.next();
+        if (!next.equals(Event.START_ARRAY)) {
+            throw new JsonObjectParserException("Expected array start");
+        }
+        U result = target;
+        while (!parser.next().equals(Event.END_ARRAY)) {
+            Event currentEvent = parser.currentEvent();
+            switch (currentEvent) {
+                case END_OBJECT:
+                    break;
+                case KEY_NAME:
+                    assert false; // should never get here
+                    break;
+                case VALUE_STRING:
+                    objectHandler.accept(result, null);
+                    break;
+                case VALUE_NUMBER:
+                    objectHandler.accept(result, null);
+                    break;
+                case VALUE_FALSE:
+                case VALUE_TRUE:
+                    objectHandler.accept(result, null);
+                    break;
+                case START_ARRAY:
+                    objectHandler.accept(result, null);
+                    parser.pushBack();
+                    consumeArray(parser);
+                    break;
+                case END_ARRAY:
+                    break;
+                case START_OBJECT:
+                    parser.pushBack();
+                    objectHandler.accept(result, builder.parseObject(parser));
+                    break;
+                case VALUE_NULL:
+                    objectHandler.accept(result, null);
+                    break;
+            }
+        }
+        parser.pushBack();
+        return target;
+    }
+
+    public U parseObject(JsonParser parser) throws IOException, JsonObjectParserException {
+        U result = supplier.get();
+
+        Event event = parser.next();
+        if (event != Event.START_OBJECT) {
+            throw new JsonObjectParserException("Expected object start (line: " + parser.line() + ")");
+        }
+
+        String label = null;
+        OUTER:
+        while (parser.hasNext()) {
+            event = parser.next();
+            INNER:
+            switch (event) {
+                case END_OBJECT:
+                    break OUTER;
+                case KEY_NAME:
+                    label = parser.sval();
+                    break;
+                case VALUE_STRING:
+                    BiConsumer<U, String> stringHandler = stringHandlers.getOrDefault(label, null);
+                    if (stringHandler != null) {
+                        stringHandler.accept(result, parser.sval());
+                    } else {
+                        missingElementHandler().accept(label, parser.sval());
+                    }
+                    break;
+                case VALUE_NUMBER:
+                    BiConsumer<U, Double> numberHandler = numberHandlers.getOrDefault(label, null);
+                    if (numberHandler != null) {
+                        numberHandler.accept(result, parser.nval());
+                    } else {
+                        missingElementHandler().accept(label, parser.nval().toString());
+                    }
+                    break;
+                case VALUE_FALSE:
+                case VALUE_TRUE:
+                    BiConsumer<U, Boolean> booleanHandler = booleanHandlers.getOrDefault(label, null);
+                    if (booleanHandler != null) {
+                        booleanHandler.accept(result, parser.bval());
+                    } else {
+                        missingElementHandler().accept(label, parser.sval());
                     }
                     break;
                 case START_ARRAY:
-                    if (label[0] != null) {
-                        if (intArrayHandlers.containsKey(label[0])) {
-                            intArrayHandlers
-                                    .get(label[0])
-                                    .accept(obj, JsonParser.ParseNumberArray(tok, () -> new ArrayList<>(), (v) -> (int) v));
-                        } else if (doubleArrayHandlers.containsKey(label[0])) {
-                            doubleArrayHandlers
-                                    .get(label[0])
-                                    .accept(obj, JsonParser.ParseNumberArray(tok, () -> new ArrayList<>(), (v) -> v));
-                        } else if (booleanArrayHandlers.containsKey(label[0])) {
-                            booleanArrayHandlers
-                                    .get(label[0])
-                                    .accept(obj, JsonParser.ParseBooleanArray(tok, () -> new ArrayList<>()));
-                        } else if (stringArrayHandlers.containsKey(label[0])) {
-                            stringArrayHandlers
-                                    .get(label[0])
-                                    .accept(obj, JsonParser.ParseStringArray(tok, () -> new ArrayList<>()));
-                        } else if (objectArrayHandlers.containsKey(label[0])) {
-                            objectArrayHandlers
-                                    .get(label[0])
-                                    .accept(obj, JsonParser.ParseObjectArray(jsonReader, tok, () -> new ArrayList(), builderMap.get(label[0])));
-                        } else {
-                            getMissingElementHandler().accept(obj, event, label[0], null);
-                            break;
-                        }
+                    parser.pushBack();
+                    parseArray(parser, result, label);
+                    break;
+                case END_ARRAY:
+                    break;
+                case START_OBJECT:
+                    BiConsumer<U, Object> objectHandler = (BiConsumer<U, Object>) objectHandlers.getOrDefault(label, null);
+                    JsonObjectBuilder<? extends Object> objectBuilder = objectBuilders.getOrDefault(label, null);
+                    if (objectHandler != null && objectBuilder != null) {
+                        parser.pushBack();
+                        Object nestedObject = objectBuilder.parseObject(parser);
+                        objectHandler.accept(result, nestedObject);
+                    } else {
+                        parser.pushBack();
+                        consumeObject(parser);
+                        missingElementHandler().accept(label, parser.sval());
                     }
+                    break;
+                case VALUE_NULL:
+                    if ((numberHandler = numberHandlers.getOrDefault(label, null)) != null) {
+                        numberHandler.accept(result, null);
+                    } else if ((stringHandler = stringHandlers.getOrDefault(label, null)) != null) {
+                        stringHandler.accept(result, null);
+                    } else if ((booleanHandler = booleanHandlers.getOrDefault(label, null)) != null) {
+                        booleanHandler.accept(result, null);
+                    }
+                    break;
             }
-        });
+        }
+        return result;
+    }
 
-        return obj;
+    public static class JsonObjectParserException extends Exception {
+
+        public JsonObjectParserException(String message) {
+            super(message);
+        }
+
     }
 
     @FunctionalInterface
-    public static interface Function<U, R> {
+    public static interface TriConsumer<U, V, W> {
 
-        R accept(U r) throws IOException, JsonParser.MalformedJsonException;
-    }
-
-    @FunctionalInterface
-    public static interface MissingElementHandler<V> {
-
-        void accept(V obj, JsonParser.JsonEvent event, String label, String value);
+        void accept(U u, V v, W w);
     }
 }

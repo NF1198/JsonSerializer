@@ -15,6 +15,7 @@
  */
 package org.tauterra.jsonstreamer;
 
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -22,6 +23,10 @@ import java.util.List;
  * @author Nicholas Folse <https://github.com/NF1198>
  */
 public class GlossaryJSON {
+    
+    public static class GlossaryWrapper {
+        public Glossary glossary;
+    }
 
     public static class Glossary {
 
@@ -78,7 +83,7 @@ public class GlossaryJSON {
     public static class GlossDef {
 
         public String para;
-        public List<String> glossSeeAlso;
+        public List<String> glossSeeAlso = new ArrayList<>();
 
         @Override
         public String toString() {

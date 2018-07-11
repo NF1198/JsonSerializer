@@ -17,7 +17,7 @@ package org.tauterra.jsonstreamer;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.InputStream;
 import static org.junit.Assert.*;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -26,6 +26,7 @@ import org.tauterra.jsonstreamer.GlossaryJSON.GlossDiv;
 import org.tauterra.jsonstreamer.GlossaryJSON.GlossEntry;
 import org.tauterra.jsonstreamer.GlossaryJSON.GlossList;
 import org.tauterra.jsonstreamer.GlossaryJSON.Glossary;
+import org.tauterra.jsonstreamer.GlossaryJSON.GlossaryWrapper;
 import org.tauterra.jsonstreamer.JsonStreamerBuilder.JsonStreamer;
 
 /**
@@ -38,7 +39,7 @@ public class GlossaryTest {
     }
 
     static JsonStreamer<Glossary> glossaryStreamer;
-    static JsonObjectBuilder<Glossary> glossaryParser;
+    static JsonObjectBuilder<GlossaryWrapper> glossaryParser;
 
     @BeforeClass
     public static void setup() {
@@ -67,38 +68,41 @@ public class GlossaryTest {
                 .build();
 
         JsonObjectBuilder<GlossDef> glossDefBuilder = new JsonObjectBuilder<>(() -> new GlossDef())
-                .addStringHandler("para", (obj, value) -> obj.para = value)
-                .addStringArrayHandler("GlossSeeAlso", (obj, value) -> obj.glossSeeAlso = value);
+                .stringHandler("para", (obj, value) -> obj.para = value)
+                .stringHandler("GlossSeeAlso", (obj, value) -> obj.glossSeeAlso.add(value));
 
         JsonObjectBuilder<GlossEntry> glossEntryBuilder = new JsonObjectBuilder<>(() -> new GlossEntry())
-                .addStringHandler("ID", (obj, value) -> obj.id = value)
-                .addStringHandler("SortAs", (obj, value) -> obj.sortAs = value)
-                .addStringHandler("GlossTerm", (obj, value) -> obj.glossTerm = value)
-                .addStringHandler("Acronym", (obj, value) -> obj.acronym = value)
-                .addStringHandler("Abbrev", (obj, value) -> obj.abbrev = value)
-                .addStringHandler("GlossSee", (obj, value) -> obj.glossSee = value)
-                .addObjectHandler("GlossDef", (obj, value) -> obj.glossDef = value, glossDefBuilder);
+                .stringHandler("ID", (obj, value) -> obj.id = value)
+                .stringHandler("SortAs", (obj, value) -> obj.sortAs = value)
+                .stringHandler("GlossTerm", (obj, value) -> obj.glossTerm = value)
+                .stringHandler("Acronym", (obj, value) -> obj.acronym = value)
+                .stringHandler("Abbrev", (obj, value) -> obj.abbrev = value)
+                .stringHandler("GlossSee", (obj, value) -> obj.glossSee = value)
+                .objectHandler("GlossDef", glossDefBuilder, (obj, value) -> obj.glossDef = value);
 
         JsonObjectBuilder<GlossList> glossListBuilder = new JsonObjectBuilder<>(() -> new GlossList())
-                .addObjectHandler("GlossEntry", (obj, value) -> obj.glossEntry = value, glossEntryBuilder);
+                .objectHandler("GlossEntry", glossEntryBuilder, (obj, value) -> obj.glossEntry = value);
 
         JsonObjectBuilder<GlossDiv> glossDivBuilder = new JsonObjectBuilder<>(() -> new GlossDiv())
-                .addStringHandler("title", (obj, value) -> obj.title = value)
-                .addObjectHandler("GlossList", (obj, value) -> obj.glossList = value, glossListBuilder);
+                .stringHandler("title", (obj, value) -> obj.title = value)
+                .objectHandler("GlossList", glossListBuilder, (obj, value) -> obj.glossList = value);
 
         JsonObjectBuilder<Glossary> glBuilder = new JsonObjectBuilder<>(() -> new Glossary())
-                .addStringHandler("title", (obj, value) -> obj.title = value)
-                .addObjectHandler("GlossDiv", (obj, value) -> obj.glossDiv = value, glossDivBuilder);
+                .stringHandler("title", (obj, value) -> obj.title = value)
+                .objectHandler("GlossDiv", glossDivBuilder, (obj, value) -> obj.glossDiv = value);
+        
+        JsonObjectBuilder<GlossaryWrapper> glWrapperBuilder = new JsonObjectBuilder<>(() -> new GlossaryWrapper())
+                .objectHandler("glossary", glBuilder, (o, v) -> o.glossary = v);
 
-        glossaryParser = glBuilder;
+        glossaryParser = glWrapperBuilder;
 
     }
 
     @Test
-    public void testGlossaryParser() throws IOException, JsonParser.MalformedJsonException {
+    public void testGlossaryParser() throws IOException, JsonObjectBuilder.JsonObjectParserException {
         System.out.println("test JSON parser");
-        InputStreamReader reader = new InputStreamReader(GlossaryJSON.class.getResourceAsStream("/json/glossary.json"));
-        Glossary g = glossaryParser.parse(reader);
+        InputStream is = GlossaryJSON.class.getResourceAsStream("/json/glossary.json");
+        Glossary g = glossaryParser.parseObject(new JsonParser(is)).glossary;
         System.out.println(g);
         assertEquals("example glossary", g.title);
         assertEquals("S", g.glossDiv.title);
@@ -114,10 +118,10 @@ public class GlossaryTest {
     }
 
     @Test
-    public void testGlossaryStreamer() throws IOException, JsonParser.MalformedJsonException {
+    public void testGlossaryStreamer() throws IOException, JsonObjectBuilder.JsonObjectParserException {
         System.out.println("test JSON streamer");
-        InputStreamReader reader = new InputStreamReader(GlossaryJSON.class.getResourceAsStream("/json/glossary.json"));
-        Glossary g = glossaryParser.parse(reader);
+        InputStream is = GlossaryJSON.class.getResourceAsStream("/json/glossary.json");
+        Glossary g = glossaryParser.parseObject(new JsonParser(is)).glossary;
 
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
 
