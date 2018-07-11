@@ -142,7 +142,7 @@ public class JsonObjectBuilder<U> {
         }
         parser.pushBack();
     }
-    
+
     public List<U> parseArrayOf(JsonParser parser, List<U> target) throws IOException, JsonObjectParserException {
         JsonObjectBuilder<List<U>> wrapper = new JsonObjectBuilder<>(() -> target);
         wrapper.parseObjectArray(parser, target, (t, e) -> t.add(e), this);
@@ -165,7 +165,8 @@ public class JsonObjectBuilder<U> {
         } else if (objectHandlers.containsKey(label) && objectBuilders.containsKey(label)) {
             @SuppressWarnings("unchecked")
             BiConsumer<U, Object> objectHandler = (BiConsumer<U, Object>) objectHandlers.getOrDefault(label, null);
-            JsonObjectBuilder<Object> objectBuilder = (JsonObjectBuilder<Object>)objectBuilders.getOrDefault(label, null);
+            @SuppressWarnings("unchecked")
+            JsonObjectBuilder<Object> objectBuilder = (JsonObjectBuilder<Object>) objectBuilders.getOrDefault(label, null);
             parseObjectArray(parser, result, objectHandler, objectBuilder);
             return result;
         } else {
@@ -404,10 +405,8 @@ public class JsonObjectBuilder<U> {
                 case END_ARRAY:
                     break;
                 case START_OBJECT:
-                    @SuppressWarnings("unchecked")
-                    BiConsumer<U, Object> objectHandler = (BiConsumer<U, Object>) objectHandlers.getOrDefault(label, null);
-                    @SuppressWarnings("unchecked")
-                    JsonObjectBuilder<? extends Object> objectBuilder = objectBuilders.getOrDefault(label, null);
+                    @SuppressWarnings("unchecked") BiConsumer<U, Object> objectHandler = (BiConsumer<U, Object>) objectHandlers.getOrDefault(label, null);
+                    @SuppressWarnings("unchecked") JsonObjectBuilder<? extends Object> objectBuilder = objectBuilders.getOrDefault(label, null);
                     if (objectHandler != null && objectBuilder != null) {
                         parser.pushBack();
                         Object nestedObject = objectBuilder.parseObject(parser);
