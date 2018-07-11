@@ -49,12 +49,12 @@ public class JsonParser {
     public static final int TT_WORD = StreamTokenizer.TT_WORD;
 
     public JsonParser(InputStream is) {
-        StreamTokenizer tok = new StreamTokenizer(
+        StreamTokenizer tok_ = new StreamTokenizer(
                 new InputStreamReader(is));
-        tok.eolIsSignificant(false);
-        tok.quoteChar('\"');
-        this.tok = tok;
-        this.stateStack = new ArrayDeque<PState>();
+        tok_.eolIsSignificant(false);
+        tok_.quoteChar('\"');
+        this.tok = tok_;
+        this.stateStack = new ArrayDeque<>();
     }
 
     public String sval() {
