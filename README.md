@@ -9,12 +9,13 @@ A compact, code-efficient JSON serializer and parser using a builder pattern
  
 # Features
 * Simple parsing of JSON to Java objects
+* Strucured (object-focused) stream-based parsing of JSON arrays
 * Simple streaming of Java objects to JSON
 * Both parser and streamer operate on Streams
 * Does not use reflection
 * Supports simple types (numbers, strings, boolean, null)
 * Supports objects, object composition, and type recursion
-* Supports arrays (including arrays of objects)
+* Supports arrays (including arrays of objects; doesn't support nested arrays, yet)
 * Parser expects single-typed arrays, but does not fail if unexpected types are encountered (produces nulls)
 
 # Examples
